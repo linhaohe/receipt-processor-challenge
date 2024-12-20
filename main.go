@@ -67,7 +67,7 @@ func postsHandler(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		handlePostPost(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		JSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
