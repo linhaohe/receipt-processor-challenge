@@ -43,6 +43,10 @@ type getResponse struct {
 	Points int64 `json:"points"`
 }
 
+type errorInterface struct {
+	Description string `json:"description"`
+}
+
 var (
 	posts   = make(map[string]Post)
 	postsMu sync.Mutex
@@ -76,45 +80,45 @@ func handlePostPost(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		JSONError(w, "Error reading request body", http.StatusInternalServerError)
 		return
 	}
 
 	if err := json.Unmarshal(body, &reqData); err != nil || reqData.Items == nil || len(reqData.Items) == 0 || len(reqData.Retailer) == 0 || len(reqData.PurchaseDate) == 0 || len(reqData.PurchaseTime) == 0 || len(reqData.Total) == 0 {
-		http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+		JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 		return
 	}
 	date, err := time.Parse(time.DateOnly, reqData.PurchaseDate)
 	if err != nil {
-		http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+		JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 		return
 	}
 
 	time, err := time.Parse("15:04", reqData.PurchaseTime)
 	if err != nil {
-		http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+		JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 		return
 	}
 
 	if isMatch, err := regexp.MatchString("^[\\w\\s\\-&]+$", reqData.Retailer); err != nil || !isMatch {
-		http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+		JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 		return
 	}
 
 	if !validPrice.MatchString(reqData.Total) {
-		http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+		JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 		return
 	}
 
 	for _, e := range reqData.Items {
 		if len(e.Price) == 0 || len(e.ShortDescription) == 0 {
-			http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+			JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 			return
 		} else if !validString.MatchString(e.ShortDescription) {
-			http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+			JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 			return
 		} else if !validPrice.MatchString(e.Price) {
-			http.Error(w, "The receipt is invalid.", http.StatusBadRequest)
+			JSONError(w, "The receipt is invalid.", http.StatusBadRequest)
 			return
 		}
 	}
@@ -129,7 +133,7 @@ func handlePostPost(w http.ResponseWriter, r *http.Request) {
 	res.ID = p.ID
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
 }
 
@@ -139,13 +143,23 @@ func handleGetPost(w http.ResponseWriter, r *http.Request, id string) {
 
 	p, ok := posts[id]
 	if !ok {
-		http.Error(w, "No receipt found for that ID.", http.StatusNotFound)
+		// http.Error(w, "No receipt found for that ID.", http.StatusNotFound)
+		JSONError(w, "No receipt found for that ID.", http.StatusNotFound)
 		return
 	}
 	var res getResponse
 	res.Points = p.Point
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)
+}
+
+func JSONError(w http.ResponseWriter, errText string, code int) {
+	var errorRes errorInterface
+	errorRes.Description = errText
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(errorRes)
 }
 
 func calculatePoints(retailer string, items []Item, date time.Time, hour time.Time, total string) int64 {
