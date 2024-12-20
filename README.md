@@ -21,14 +21,14 @@ http://localhost:8080/receipts/{{id}}/points
 ```
 An Id must exist in local storeage to calculate point, 
 
-#### Sucess 
+#### Success 
 ```
-{status:200, "points": 109}
+{ "points": 109}
 ```
 
 #### Fail
 ```
-{status:404, "description" : "No receipt found for that ID."}
+{"description" : "No receipt found for that ID."}
 ```
 ### Post
 ```
@@ -57,11 +57,11 @@ http://localhost:8080/receipts/process
   "total": "9.00"
 }
 ```
-#### on sucess
+#### on Success
 ```
-{status:201, "id": "ce265348-6a8f-4ae3-ae9c-1af6e6d9e126"}
+{"id": "ce265348-6a8f-4ae3-ae9c-1af6e6d9e126"}
 ```
 #### Fail
 ```
-{status:400, "description" : "The receipt is invalid."}
+{ "description" : "The receipt is invalid."}
 ```
